@@ -2,300 +2,372 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mycards</title>
-	<link rel="manifest" href="./manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽卡</title>
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <!-- 嵌入 CSS -->
     <style>
-        /* --- 全局和基础样式 --- */
-        :root {
-            --safe-area-bottom: env(safe-area-inset-bottom, 20px);
-        }
-        html, body {
+        * {
             margin: 0;
             padding: 0;
-            height: 100%;
-            width: 100%;
-            overflow-x: hidden;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
         }
+
         body {
-            background-color: #f5f7fa;
-            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            max-width: 80vw;
-            margin: 0 auto;
+            padding: 10px;
+            background-color: #f4f4f4;
         }
-        /* --- 页面容器和导航 --- */
-        .page-container {
+
+        .tab {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tab-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #ddd;
+            border-radius: 4px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .tab-item.active {
+            background-color: #333;
+            color: white;
+        }
+
+        .card-header {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-info {
+            margin: 5px 0;
+        }
+
+        .card-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .card-empty {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .next-btn {
+            padding: 10px 20px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .modal {
             display: none;
-            flex-direction: column;
-            min-height: calc(100vh - 80px);
-            padding: 1vw;
-            box-sizing: border-box;
-            padding-top: 80px;
-        }
-        .page-container.active {
-            display: flex;
-        }
-        .app-nav {
             position: fixed;
             top: 0;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 0;
             width: 100%;
-            max-width: 80vw;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        #checkInput {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+            touch-action: auto !important;
+            pointer-events: auto !important;
+        }
+
+        .modal-actions {
             display: flex;
             justify-content: space-around;
-            background-color: #ffffff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 5000;
-            padding: 10px 0;
-            border-bottom-left-radius: 20px;
-            border-bottom-right-radius: 20px;
+            margin-top: 10px;
         }
-        .nav-btn {
-            background: none;
+
+        .modal-btn {
+            padding: 8px 16px;
+            border-radius: 4px;
             border: none;
-            padding: 10px 15px;
-            font-size: 16px;
-            color: #666;
-            font-weight: bold;
             cursor: pointer;
-            border-radius: 20px;
-            transition: background-color 0.3s, color 0.3s;
         }
-        .nav-btn.active {
-            background-color: #00bcd4;
+
+        #cancelCheck, #cancelDelete {
+            background-color: #ccc;
+        }
+
+        #saveCheck, #confirmDelete {
+            background-color: #007bff;
             color: white;
         }
-        /* --- 通用组件 --- */
-        .toast {
-            position: fixed;
-            bottom: calc(34.67vw + var(--safe-area-bottom));
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 2.67vw 5.33vw;
-            border-radius: 3.2vw;
-            font-size: 3.73vw;
-            z-index: 9999;
-            user-select: none;
-            text-align: center;
-            animation: toastFadeIn 0.3s ease;
-            max-width: 85%;
-            box-sizing: border-box;
+
+        .manage-actions, .marked-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .manage, .marked {
             display: none;
-        }
-        @keyframes toastFadeIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(20%); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        .toast.success { background: #4caf50; }
-        .toast.error { background: #f44336; }
-        .toast.info { background: #2196f3; }
-        .btn {
-            flex: 1;
-            border-radius: 6.67vw;
-            font-size: 3.4vw;
-            height: 11.73vw;
-            line-height: 11.73vw;
-            box-shadow: 0 0.53vw 1.07vw rgba(0, 0, 0, 0.1);
-            text-align: center;
-            border: none;
-            font-weight: bold;
-            color: white;
-            user-select: none;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            padding: 0 1vw;
-        }
-        .btn:active { opacity: 0.8; }
-        .delete { background-color: #e74c3c; }
-        .mark { background-color: #f39c12; }
-        .spell { background-color: #9b59b6; }
-        .travel { background-color: #3498db; }
-        .draw {
-            background-color: #2ecc71;
-            width: 100%;
-            font-size: 4vw;
-            border-radius: 8vw;
-        }
-        /* --- 页面1 (抽卡) 样式 --- */
-        #page1 { align-items: center; }
-        .flex-grow { flex-grow: 1; }
-        .stats-card {
-            background-color: #ffffff;
-            border-radius: 2.67vw;
-            box-shadow: 0 0.53vw 1.6vw rgba(0, 0, 0, 0.05);
-            padding: 3.73vw;
-            margin: 2.67vw auto;
-            width: 95%;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .statistics {
-            margin: 1.07vw 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: nowrap;
-        }
-        .label { font-size: 3.73vw; color: #666; user-select: none; }
-        .value { font-size: 4.27vw; font-weight: bold; color: #00bcd4; margin: 0 0.8vw; user-select: text; }
-        .bottom-fixed-section {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 80vw;
-            padding: 0 2.13vw calc(6.67vw + var(--safe-area-bottom));
-            box-sizing: border-box;
-            background-color: transparent;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .card-display {
-            width: 100%;
-            min-height: 32vw;
-            max-height: 42.67vw;
-            padding: 1.07vw 0;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .card-content { font-size: 4.27vw; line-height: 1.6; color: #333; text-align: center; word-break: break-word; user-select: text; }
-        .button-group { width: 100%; display: flex; flex-direction: column; gap: 2.13vw; padding-bottom: 0.67vw; box-sizing: border-box; }
-        .button-row { display: flex; justify-content: space-between; gap: 1.6vw; width: 100%; }
-        
-        /* Dialogs */
-        .dialog-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; display: none; }
-        .dialog-container { width: 80%; background: #fff; border-radius: 3.2vw; overflow: hidden; box-shadow: 0 1.33vw 4vw rgba(0, 0, 0, 0.2); }
-        .dialog-header { padding: 4vw; font-size: 4.8vw; font-weight: bold; text-align: center; background-color: #f8f8f8; border-bottom: 1px solid #eee; color: #2c3e50; }
-        .dialog-body { padding: 6.67vw 4vw; text-align: center; font-size: 4.27vw; color: #555; line-height: 1.6; }
-        .dialog-footer { display: flex; border-top: 1px solid #eee; }
-        .dialog-footer button { flex: 1; margin: 0; padding: 3.33vw 0; border-radius: 0; font-size: 4.27vw; background: #fff; border: none; cursor: pointer; }
-        .btn-cancel { color: #666; border-right: 1px solid #eee; }
-        .btn-confirm { color: #e64340; font-weight: bold; }
-        .spell-dialog-container { width: 90%; max-width: 80vw; background: #fff; border-radius: 3.2vw; overflow: hidden; box-shadow: 0 1.33vw 4vw rgba(0, 0, 0, 0.2); }
-        .spell-dialog-header { padding: 4vw; font-size: 4.8vw; font-weight: bold; text-align: center; background-color: #9b59b6; color: white; }
-        .spell-dialog-body { padding: 5.33vw 4vw; }
-        .spell-input-container { position: relative; margin-bottom: 5.33vw; }
-        .spell-input { 
-            width: 100%; 
-            height: 13.33vw; 
-            border: 0.27vw solid #ddd; 
-            border-radius: 1.6vw; 
-            padding: 0 2.67vw; 
-            font-size: 4.8vw; 
-            text-align: center; 
-            transition: border-color 0.3s; 
-            box-sizing: border-box;
-            lang: "en";
-        }
-        .spell-input.error { border-color: #e74c3c; }
-        .spell-error-msg { display: none; }
-        .spell-correct-msg { display: none; }
-        /* --- 页面2 (管理) 样式 --- */
-        .page2-bottom-fixed-section {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 80vw;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-sizing: border-box;
             padding: 20px;
-            padding-bottom: calc(20px + var(--safe-area-bottom));
         }
-        .input-box {
-            width: 100%;
-            height: 80px;
-            border: 1px solid #cccccc;
-            border-radius: 5px;
-            padding: 10px 14px;
-            font-size: 15px;
+
+        .marked-empty {
+            color: #666;
             margin-bottom: 20px;
-            box-shadow: inset 0 0.27vw 0.8vw rgba(0, 0, 0, 0.06);
-            color: #333333;
-            transition: border-color 0.3s ease;
-            box-sizing: border-box;
         }
-        .input-box:focus { border-color: #007AFF; box-shadow: 0 0 0.8vw #007AFF; outline: none; }
-        .top-btn-row { display: flex; justify-content: center; align-items: center; width: 100%; margin: 0 auto; gap: 1.6vw; }
-        #page2 .btn { font-size: 3.73vw; }
-        .left-delete { background: linear-gradient(135deg, #f44336, #e53935); }
-        .save-btn { background: linear-gradient(135deg, #409ef0, #136cf1); box-shadow: 0 0.8vw 1.6vw rgba(0, 130, 255, 0.4); }
-        .right-copy { background: linear-gradient(135deg, #4caf50, #43a047); }
-        #page2 .btn:active { transform: scale(0.97); opacity: 0.85; }
-        .save-status { display: none; }
-        /* --- 页面3 (已标记) 样式 --- */
-        #page3 { justify-content: flex-end; align-items: center; }
-        .marked-words-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2.67vw;
-            justify-content: center;
-            width: 100%;
-            padding-bottom: calc(15vw + var(--safe-area-bottom));
-        }
-        .marked-word { display: inline-flex; justify-content: center; align-items: center; padding: 1.87vw 3.2vw; font-size: 4.27vw; border-radius: 5.33vw; background-color: #00bcd4; color: white; user-select: text; cursor: pointer; white-space: nowrap; box-sizing: border-box; transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s; }
-        .marked-word.selected { background-color: #f39c12; transform: scale(1.05); box-shadow: 0 0.53vw 1.6vw rgba(0, 0, 0, 0.1); }
-        .no-marked { display: none; }
-        .page3-action-container {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            max-width: 80vw;
-            z-index: 999;
-            display: none;
-            gap: 15px;
-            padding: 20px 0;
-            padding-bottom: calc(20px + var(--safe-area-bottom));
-        }
-        .btn-p3-action { flex: 1; height: 11.73vw; line-height: 11.73vw; font-size: 4.27vw; border-radius: 5.87vw; text-align: center; font-weight: bold; user-select: none; border: none; color: white; }
     </style>
 </head>
 <body>
-    <nav class="app-nav">
-        <button id="nav-btn-1" class="nav-btn active">抽卡</button>
-        <button id="nav-btn-2" class="nav-btn">管理</button>
-        <button id="nav-btn-3" class="nav-btn">已标记</button>
-    </nav>
-    <div id="page1" class="page-container active">
-        <div class="stats-card">
-            <div class="statistics"><span class="label">🔥 今天已刷</span><span class="value" id="todaySwipeCount">0</span><span class="label">次！</span></div>
-            <div class="statistics"><span class="label">🔁 总共刷了</span><span class="value" id="swipeCount">0</span><span class="label">次！</span></div>
-            <div class="statistics"><span class="label">📊 当前数据数量：</span><span class="value" id="cardCount">0 条</span></div>
-            <div class="statistics"><span class="label">⏱️ 最后更新：</span><span class="value" id="lastUpdateTime"></span></div>
+    <!-- Tab 导航 -->
+    <div class="tab">
+        <div class="tab-item active" data-tab="card">抽卡</div>
+        <div class="tab-item" data-tab="manage">管理</div>
+        <div class="tab-item" data-tab="marked">已标记</div>
+    </div>
+
+    <!-- 抽卡页面 -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-info">🔥 今天已刷0次！</div>
+            <div class="card-info">🔁 总共刷了0次！</div>
+            <div class="card-info">📊 当前数据数量：0 条</div>
+            <div class="card-info">⏱️ 最后更新：</div>
         </div>
-        <div class="flex-grow"></div>
-        <div class="bottom-fixed-section">
-            <div class="card-display"><span class="card-content" id="displayContent">暂无内容，请添加</span></div>
-            <div class="button-group">
-                <div class="button-row">
-                    <button class="btn delete" id="deleteContentBtn">删除</button>
-                    <button class="btn mark" id="markwordBtn">标记</button>
-                    <button class="btn spell" id="openSpellCheckBtn">检查</button>
-                    <button class="btn travel" id="travelBtn">穿越</button>
-                </div>
-                <button class="btn draw" id="drawOneBtn">下一张</button>
+
+        <div class="card-content">
+            <div class="card-empty">暂无内容，请添加</div>
+            <div class="card-actions">
+                <button class="action-btn" id="deleteButton">删除</button>
+                <button class="action-btn" id="markButton">标记</button>
+                <button class="action-btn" id="checkButton">检查</button>
+                <button class="action-btn" id="travelButton">穿越</button>
+            </div>
+            <button class="next-btn">下一张</button>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>确认删除</h3>
+            <p>确定要删除当前卡片吗？</p>
+            <div class="modal-actions">
+                <button class="modal-btn" id="cancelDelete">取消</button>
+                <button class="modal-btn" id="confirmDelete">确定</button>
             </div>
         </div>
-        <div id="confirmDialog" class="dialog-mask">
-            <div class="dialog-container" onclick="event.stopPropagation()">
-                <div class="dialog-header">确认删除</div>
-                <div class="dialog-body">确定要删除当前卡片吗？</div>
-                <div class="dialog-footer">
-                    <button id="cancelDelete
+    </div>
+
+    <!-- 检查模态框 -->
+    <div id="checkModal" class="modal">
+        <div class="modal-content">
+            <form id="checkForm">
+                <input type="text" id="checkInput" placeholder="请输入检查内容">
+                <div class="modal-actions">
+                    <button type="button" class="modal-btn" id="cancelCheck">取消</button>
+                    <button type="submit" class="modal-btn" id="saveCheck">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 管理页面 -->
+    <div class="manage">
+        <div class="manage-actions">
+            <button class="action-btn" id="manageDelete">删除</button>
+            <button class="action-btn" id="manageCopy">复制</button>
+            <button class="action-btn" id="manageSave">保存</button>
+        </div>
+    </div>
+
+    <!-- 已标记页面 -->
+    <div class="marked">
+        <div class="marked-empty">暂无标记内容</div>
+        <div class="marked-actions">
+            <button class="action-btn" id="markedDelete">删除</button>
+            <button class="action-btn" id="markedTravel">穿越</button>
+        </div>
+    </div>
+
+    <!-- 嵌入 JavaScript -->
+    <script>
+        // 页面元素
+        const checkButton = document.querySelector('#checkButton');
+        const checkModal = document.querySelector('#checkModal');
+        const checkInput = document.querySelector('#checkInput');
+        const cancelCheck = document.querySelector('#cancelCheck');
+        const checkForm = document.querySelector('#checkForm');
+        const tabs = document.querySelectorAll('.tab-item');
+        const sections = {
+            card: document.querySelector('.card'),
+            manage: document.querySelector('.manage'),
+            marked: document.querySelector('.marked')
+        };
+
+        // 显示检查模态框并处理键盘
+        checkButton.addEventListener('click', () => {
+            checkModal.style.display = 'flex';
+            
+            // 确保输入框可交互
+            checkInput.focusable = true;
+            checkInput.focus();
+
+            // 使用 VirtualKeyboard API（如果支持）
+            if ('virtualKeyboard' in navigator) {
+                navigator.virtualKeyboard.overlaysContent = true;
+                navigator.virtualKeyboard.show();
+            }
+
+            // 模拟用户交互（针对 iOS PWA bug）
+            const touchEvent = new Event('touchstart', { bubbles: true });
+            checkInput.dispatchEvent(touchEvent);
+        });
+
+        // 关闭检查模态框
+        cancelCheck.addEventListener('click', () => {
+            checkModal.style.display = 'none';
+            checkInput.value = '';
+            if ('virtualKeyboard' in navigator) {
+                navigator.virtualKeyboard.hide();
+            }
+        });
+
+        // 检查表单提交
+        checkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const value = checkInput.value.trim();
+            if (value) {
+                console.log('保存检查内容：', value);
+                // TODO: 实现保存逻辑（例如保存到 localStorage）
+                checkModal.style.display = 'none';
+                checkInput.value = '';
+                if ('virtualKeyboard' in navigator) {
+                    navigator.virtualKeyboard.hide();
+                }
+            }
+        });
+
+        // Tab 切换逻辑
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach((t) => t.classList.remove('active'));
+                tab.classList.add('active');
+                Object.values(sections).forEach((section) => section.style.display = 'none');
+                const tabName = tab.getAttribute('data-tab');
+                sections[tabName].style.display = 'block';
+            });
+        });
+
+        // 删除模态框逻辑
+        document.querySelector('#deleteButton').addEventListener('click', () => {
+            document.querySelector('#deleteModal').style.display = 'flex';
+        });
+
+        document.querySelector('#cancelDelete').addEventListener('click', () => {
+            document.querySelector('#deleteModal').style.display = 'none';
+        });
+
+        document.querySelector('#confirmDelete').addEventListener('click', () => {
+            console.log('确认删除卡片');
+            // TODO: 实现删除逻辑
+            document.querySelector('#deleteModal').style.display = 'none';
+        });
+
+        // 其他按钮占位逻辑
+        document.querySelector('#markButton').addEventListener('click', () => {
+            console.log('标记卡片');
+            // TODO: 实现标记逻辑
+        });
+
+        document.querySelector('#travelButton').addEventListener('click', () => {
+            console.log('穿越卡片');
+            // TODO: 实现穿越逻辑
+        });
+
+        document.querySelector('#manageDelete').addEventListener('click', () => {
+            console.log('管理页面 - 删除');
+            // TODO: 实现管理删除逻辑
+        });
+
+        document.querySelector('#manageCopy').addEventListener('click', () => {
+            console.log('管理页面 - 复制');
+            // TODO: 实现复制逻辑
+        });
+
+        document.querySelector('#manageSave').addEventListener('click', () => {
+            console.log('管理页面 - 保存');
+            // TODO: 实现保存逻辑
+        });
+
+        document.querySelector('#markedDelete').addEventListener('click', () => {
+            console.log('已标记页面 - 删除');
+            // TODO: 实现标记删除逻辑
+        });
+
+        document.querySelector('#markedTravel').addEventListener('click', () => {
+            console.log('已标记页面 - 穿越');
+            // TODO: 实现标记穿越逻辑
+        });
+
+        document.querySelector('.next-btn').addEventListener('click', () => {
+            console.log('下一张卡片');
+            // TODO: 实现下一张逻辑
+        });
+
+        // 服务工作线程注册（可选）
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js').catch((error) => {
+                    console.error('Service Worker 注册失败:', error);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
