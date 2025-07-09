@@ -311,7 +311,7 @@
                 <div class="spell-dialog-header"></div>
                 <div class="spell-dialog-body">
                     <div class="spell-input-container">
-                        <input id="spellInput" class="spell-input" placeholder="正在检查..." value="">
+                        <input id="spellInput" class="spell-input" placeholder="正在检查..." value="" inputmode="latin" lang="en">
                         <div id="spellMessageContainer"></div>
                     </div>
                 </div>
@@ -392,7 +392,6 @@
         let currentPageIndex = 1;
         const swipeThreshold = 50; // 最小滑动距离
 
-        // ================== START: CORRECTED CODE ==================
         /**
          * Handles the start of a touch event for swipe navigation.
          * The logic is specifically designed to avoid interfering with default browser behaviors
@@ -421,7 +420,6 @@
             // an interactive control, so it's safe to begin a swipe gesture.
             touchStartX = event.changedTouches[0].screenX;
         }
-        // =================== END: CORRECTED CODE ===================
 
         function handleTouchEnd(event) {
             if (touchStartX === 0) return;
