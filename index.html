@@ -392,6 +392,7 @@
         let touchStartX = 0;
         let currentPageIndex = 1;
         const swipeThreshold = 50; // 最小滑动距离
+        let isSwipeEnabled = false; // --- FIX: State to track if swipe is active
 
         function handleTouchStart(event) {
             const targetNode = event.target.nodeName.toUpperCase();
@@ -414,10 +415,21 @@
             touchStartX = 0;
         }
 
-        // --- FIX: Use { passive: true } to prevent interference with keyboard behavior ---
-        document.body.addEventListener('touchstart', handleTouchStart, { passive: true });
-        document.body.addEventListener('touchend', handleTouchEnd, { passive: true });
-        // --- 滑动切换逻辑结束 ---
+        // --- FIX START: Helper functions to enable/disable swipe ---
+        function enableSwipe() {
+            if (isSwipeEnabled) return;
+            document.body.addEventListener('touchstart', handleTouchStart, { passive: true });
+            document.body.addEventListener('touchend', handleTouchEnd, { passive: true });
+            isSwipeEnabled = true;
+        }
+
+        function disableSwipe() {
+            if (!isSwipeEnabled) return;
+            document.body.removeEventListener('touchstart', handleTouchStart, { passive: true });
+            document.body.removeEventListener('touchend', handleTouchEnd, { passive: true });
+            isSwipeEnabled = false;
+        }
+        // --- FIX END ---
 
         function navigateTo(pageId) {
             Object.values(pages).forEach(p => p.classList.remove('active'));
@@ -485,13 +497,17 @@
                 deleteContent() {
                     if (!this.data.displayContent || this.data.displayContent === '暂无内容，请添加') { wx.showToast({ title: '没有内容可删除', icon: 'error' }); return; }
                     this.elements.confirmDialog.style.display = 'flex';
+                    disableSwipe(); // --- FIX
                 },
                 confirmDelete() {
                     const cards = wx.getStorageSync('myCards') || []; const idx = this.data.currentIndex;
                     if (idx >= 0 && idx < cards.length) { cards.splice(idx, 1); wx.setStorageSync('myCards', cards); wx.showToast({ title: '删除成功', icon: 'success' }); this.getRandomContent(); }
                     this.cancelDelete();
                 },
-                cancelDelete() { this.elements.confirmDialog.style.display = 'none'; },
+                cancelDelete() { 
+                    this.elements.confirmDialog.style.display = 'none'; 
+                    enableSwipe(); // --- FIX
+                },
                 markword() {
                     const word = this.data.displayContent;
                     if (!word || word === '暂无内容，请添加') { wx.showToast({ title: '没有内容可标记', icon: 'error' }); return; }
@@ -513,10 +529,14 @@
                     this.elements.spellMessageContainer.innerHTML = '';
                     this.elements.spellInput.classList.remove('error');
                     this.elements.spellCheckDialog.style.display = 'flex';
-                    // --- FIX: Removed setTimeout hack. Direct focus now works reliably. ---
+                    disableSwipe(); // --- FIX
                     this.elements.spellInput.focus();
                 },
-                closeSpellCheck() { this.elements.spellCheckDialog.style.display = 'none'; this.data.isChecking = false; },
+                closeSpellCheck() { 
+                    this.elements.spellCheckDialog.style.display = 'none'; 
+                    this.data.isChecking = false; 
+                    enableSwipe(); // --- FIX
+                },
                 checkSpelling() {
                     if (this.data.isChecking) return; this.data.isChecking = true; const input = this.elements.spellInput.value.trim().toLowerCase(); const correct = (this.data.displayContent || '').trim().toLowerCase();
                     const msgContainer = this.elements.spellMessageContainer;
@@ -542,6 +562,10 @@
                     document.getElementById('saveCardBtn').addEventListener('click', () => this.saveCard());
                     document.getElementById('copyAllBtn').addEventListener('click', () => this.copyAllContents());
                     document.getElementById('clearAllBtn').addEventListener('click', () => this.onClearAll());
+
+                    // --- FIX: Manage swipe based on textarea focus ---
+                    this.elements.inputContent.addEventListener('focus', disableSwipe);
+                    this.elements.inputContent.addEventListener('blur', enableSwipe);
                 },
                 saveCard() {
                     const content = this.elements.inputContent.value;
@@ -622,6 +646,7 @@
         // --- Initialize App ---
         Object.values(app).forEach(pageModule => { if(typeof pageModule.onLoad === 'function') pageModule.onLoad(); });
         navigateTo('page1');
+        enableSwipe(); // --- FIX: Initially enable swipe
     });
     </script>
 	<script>
