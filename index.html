@@ -1,10 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>mycards</title>
-	<link rel="manifest" href="./manifest.json">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>mycards</title>
+
+  <!-- 必须包含：manifest 文件 -->
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- 建议添加：PWA 主题颜色（影响顶部状态栏颜色、图标背景） -->
+  <meta name="theme-color" content="#007AFF">
+
+  <!-- 建议添加：苹果设备兼容（尤其是 iOS 上添加到主屏幕） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="mycards">
+  <link rel="apple-touch-icon" href="./icons/icon-512.png">
+</head>
     <style>
         /* --- 全局和基础样式 --- */
         :root {
