@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>mycards</title>
+    <link rel="manifest" href="./manifest.json">
+    <style>
+        /* --- 全局和基础样式 --- */
+        :root {
+            --safe-area-bottom: env(safe-area-inset-bottom, 20px);
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow-x: hidden;
+            background-color: #f5f7fa;
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            max-width: 80vw;
+            margin: 0 auto;
+        }
+
+        /* --- 页面容器和导航 --- */
+        .page-container {
+            display: none; /* 默认隐藏所有页面 */
+            flex-direction: column;
+            min-height: calc(100vh - 80px);
+            padding: 1vw; /* 基础padding */
+            box-sizing: border-box;
+            padding-top: 80px; /* 为固定导航留出空间 */
+        }
+
+        .page-container.active {
+            display: flex; /* 显示当前活动页面 */
+        }
+
+        .app-nav {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 80vw;
+            display: flex;
+            justify-content: space-around;
+            background-color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 5000;
+            padding: 10px 0;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            color: #666;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .nav-btn.active {
+            background-color: #00bcd4;
+            color: white;
+        }
+
+        /* --- 通用组件 --- */
+        .toast {
+            position: fixed;
+            bottom: calc(34.67vw + var(--safe-area-bottom) + 1.5cm);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2.67vw 5.33vw;
+            border-radius: 3.2vw;
+            font-size: 3.73vw;
+            z-index: 9999;
+            user-select: none;
+            text-align: center;
+            animation: toastFadeIn 0.3s ease;
+            max-width: 85%;
+            box-sizing: border-box;
+        }
+
+        @keyframes toastFadeIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(20%); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .toast.success { background: #4caf50; }
+        .toast.error { background: #f44336; }
+        .toast.info { background: #2196f3; }
+
+        .btn {
+            flex: 1;
+            border-radius: 6.67vw;
+            font-size: 3.4vw;
+            height: 11.73vw;
+            line-height: 11.73vw;
+            box-shadow: 0 0.53vw 1.07vw rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: none;
+            font-weight: bold;
+            color: white;
+            user-select: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            padding: 0 1vw;
+        }
+        .btn:active { opacity: 0.8; }
+        .delete { background-color: #e74c3c; }
+        .mark { background-color: #f39c12; }
+        .spell { background-color: #9b59b6; }
+        .travel { background-color: #3498db; }
+        .draw {
+            background-color: #2ecc71;
+            width: 100%;
+            font-size: 4vw;
+            border-radius: 8vw;
+        }
+
+        /* --- 页面1 (抽卡) 样式 --- */
+        #page1 { align-items: center; }
+        .flex-grow { flex-grow: 1; }
+        .stats-card {
+            background-color: #ffffff;
+            border-radius: 2.67vw;
+            box-shadow: 0 0.53vw 1.6vw rgba(0, 0, 0, 0.05);
+            padding: 3.73vw;
+            margin: 2.67vw auto;
+            width: 95%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .statistics {
+            margin: 1.07vw 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        .label { font-size: 3.73vw; color: #666; user-select: none; }
+        .value { font-size: 4.27vw; font-weight: bold; color: #00bcd4; margin: 0 0.8vw; user-select: text; }
+        .bottom-fixed-section {
+            position: fixed;
+            bottom: 1.5cm;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 80vw;
+            padding: 0 2.13vw calc(6.67vw + var(--safe-area-bottom));
+            box-sizing: border-box;
+            background-color: transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card-display {
+            width: 100%;
+            min-height: 32vw;
+            max-height: 42.67vw;
+            padding: 1.07vw 0;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .card-content { 
+            font-size: 4.27vw; 
+            line-height: 1.6; 
+            color: #333; 
+            text-align: center; 
+            word-break: break-word; 
+            user-select: text; 
+            /* 调整左右 padding，为角标留出空间 */
+            padding: 0 5.5vw; 
+            display: inline-block; /* 确保 padding 起作用 */
+            box-sizing: border-box;
+        }
+        .button-group { width: 100%; display: flex; flex-direction: column; gap: 2.13vw; padding-bottom: 0.67vw; box-sizing: border-box; }
+        .button-row { display: flex; justify-content: space-between; gap: 1.6vw; width: 100%; }
+        
+        .round-progress {
+            font-size: 3.73vw;
+            color: #666;
+            margin-bottom: 10px;
+            text-align: center;
+            min-height: 1.2em; /* Ensure space for display */
+        }
+
+        /* Dialogs */
+        .dialog-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        .dialog-container { width: 80%; background: #fff; border-radius: 3.2vw; overflow: hidden; box-shadow: 0 1.33vw 4vw rgba(0, 0, 0, 0.2); }
+        .dialog-header { padding: 4vw; font-size: 4.8vw; font-weight: bold; text-align: center; background-color: #f8f8f8; border-bottom: 1px solid #eee; color: #2c3e50; }
+        .dialog-body { padding: 6.67vw 4vw; text-align: center; font-size: 4.27vw; color: #555; line-height: 1.6; }
+        .dialog-footer { display: flex; border-top: 1px solid #eee; }
+        .dialog-footer button { flex: 1; margin: 0; padding: 3.33vw 0; border-radius: 0; font-size: 4.27vw; background: #fff; border: none; cursor: pointer; }
+        .btn-cancel { color: #666; border-right: 1px solid #eee; }
+        .btn-confirm { color: #e64340; font-weight: bold; }
+        .spell-dialog-container { width: 90%; max-width: 80vw; background: #fff; border-radius: 3.2vw; overflow: hidden; box-shadow: 0 1.33vw 4vw rgba(0, 0, 0, 0.2); }
+        .spell-dialog-header { padding: 4vw; font-size: 4.8vw; font-weight: bold; text-align: center; background-color: #9b59b6; color: white; }
+        .spell-dialog-body { padding: 5.33vw 4vw; }
+        .spell-input-container { position: relative; margin-bottom: 5.33vw; }
+        .spell-input { width: 100%; height: 13.33vw; border: 0.27vw solid #ddd; border-radius: 1.6vw; padding: 0 2.67vw; font-size: 4.8vw; text-align: center; transition: border-color 0.3s; box-sizing: border-box; }
+        .spell-input.error { border-color: #e74c3c; }
+        .spell-error-msg { color: #e74c3c; font-size: 3.73vw; text-align: center; margin-top: 2.67vw; }
+        .spell-correct-msg { color: #2ecc71; font-size: 4.27vw; font-weight: bold; text-align: center; margin-top: 2.67vw; }
+
+        /* --- 页面2 (管理) 样式 --- */
+        .page2-bottom-fixed-section {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 80vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 20px;
+            padding-bottom: calc(20px + var(--safe-area-bottom));
+        }
+        .input-box {
+            width: 100%;
+            height: 80px;
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            padding: 10px 14px;
+            font-size: 15px;
+            margin-bottom: 20px;
+            box-shadow: inset 0 0.27vw 0.8vw rgba(0, 0, 0, 0.06);
+            color: #333333;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        .input-box:focus { border-color: #007AFF; box-shadow: 0 0 0.8vw #007AFF; outline: none; }
+        .top-btn-row { display: flex; justify-content: center; align-items: center; width: 100%; margin: 0 auto; gap: 1.6vw; }
+        #page2 .btn { font-size: 3.73vw; }
+        .left-delete { background: linear-gradient(135deg, #f44336, #e53935); }
+        .save-btn { background: linear-gradient(135deg, #409ef0, #136cf1); box-shadow: 0 0.8vw 1.6vw rgba(0, 130, 255, 0.4); }
+        .right-copy { background: linear-gradient(135deg, #4caf50, #43a047); }
+        #page2 .btn:active { transform: scale(0.97); opacity: 0.85; }
+        .save-status { margin-top: 20px; font-size: 4.27vw; color: #2ecc71; min-height: 20px; font-weight: bold; }
+        /* --- [CSS 新增] --- */
+        .version-info {
+            font-size: 3.2vw;
+            color: #aaa;
+            text-align: center;
+            margin-top: 15px; /* 与上方内容保持距离 */
+        }
+        /* --- [CSS 新增结束] --- */
+
+
+        /* --- 页面3 (已标记) 样式 --- */
+        #page3 { justify-content: flex-end; align-items: center; }
+        .marked-words-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2.67vw;
+            justify-content: center;
+            width: 100%;
+            padding-bottom: calc(15vw + var(--safe-area-bottom)); /* 为底部按钮留出空间 */
+        }
+        .marked-word { display: inline-flex; justify-content: center; align-items: center; padding: 1.87vw 3.2vw; font-size: 4.27vw; border-radius: 5.33vw; background-color: #00bcd4; color: white; user-select: text; cursor: pointer; white-space: nowrap; box-sizing: border-box; transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s; }
+        .marked-word.selected { background-color: #f39c12; transform: scale(1.05); box-shadow: 0 0.53vw 1.6vw rgba(0, 0, 0, 0.1); }
+        .no-marked { font-size: 3.73vw; color: #999; text-align: center; padding-bottom: calc(15vw + var(--safe-area-bottom)); }
+        .page3-action-container {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 80vw;
+            z-index: 999;
+            display: none; /* 默认隐藏 */
+            gap: 15px; /* 按钮间距 */
+            padding: 20px 0;
+            padding-bottom: calc(20px + var(--safe-area-bottom));
+        }
+        .btn-p3-action { flex: 1; height: 11.73vw; line-height: 11.73vw; font-size: 4.27vw; border-radius: 5.87vw; text-align: center; font-weight: bold; user-select: none; border: none; color: white; }
+
+        /* 新增的单词计数和天数样式 */
+        .card-content-container {
+            position: relative;
+            display: inline-block;
+            z-index: 1; 
+        }
+        
+        .card-text {
+            position: relative;
+            z-index: 2; 
+        }
+
+        .word-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 2.67vw;
+            color: #999;
+            border-radius: 50%;
+            width: 4.8vw;
+            height: 4.8vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            z-index: 3; 
+        }
+
+        /* ----------------------- 新增筛选框样式 ----------------------- */
+        .filter-section {
+            width: 95%;
+            margin: 2.67vw auto;
+            padding: 3.73vw;
+            background-color: transparent; 
+            box-shadow: none; 
+            display: flex;
+            flex-wrap: wrap; 
+            justify-content: center;
+            gap: 2vw; 
+        }
+
+        .filter-dot {
+            width: 8vw; 
+            height: 8vw;
+            border-radius: 50%;
+            background-color: #eee;
+            color: #555;
+            font-size: 3.2vw;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); 
+            user-select: none;
+            flex: 0 0 calc(100% / 6 - 2vw * 5 / 6); 
+            max-width: calc(100% / 6 - 2vw * 5 / 6); 
+        }
+
+        .filter-dot.selected {
+            background-color: #00bcd4; 
+            color: white;
+            transform: scale(1.1); 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <nav class="app-nav">
+        <button id="nav-btn-1" class="nav-btn active">抽卡</button>
+        <button id="nav-btn-2" class="nav-btn">管理</button>
+        <button id="nav-btn-3" class="nav-btn">已标记</button>
+    </nav>
+
+    <div id="page1" class="page-container active">
+        <div class="stats-card">
+            <div class="statistics"><span class="label">🔥 今天已刷</span><span class="value" id="todaySwipeCount">0</span><span class="label">次！</span></div>
+            <div class="statistics"><span class="label">🔁 总共刷了</span><span class="value" id="swipeCount">0</span><span class="label">次！</span></div>
+            <div class="statistics"><span class="label">📊 当前数据数量：</span><span class="value" id="cardCount">0 条</span></div>
+            <div class="statistics"><span class="label">⏱️ 最后更新：</span><span class="value" id="lastUpdateTime"></span></div>
+        </div>
+
+        <div class="filter-section" id="pastdayFilterSection">
+        </div>
+
+        <div class="flex-grow"></div>
+        <div class="bottom-fixed-section">
+            <div id="roundProgressDisplay" class="round-progress" style="display: none;"></div>
+            <div class="card-display"><span class="card-content" id="displayContent">暂无内容，请添加</span></div>
+            <div class="button-group">
+                <div class="button-row">
+                    <button class="btn delete" id="deleteContentBtn">删除</button>
+                    <button class="btn mark" id="markwordBtn">标记</button>
+                    <button class="btn spell" id="openSpellCheckBtn">检查</button>
+                    <button class="btn travel" id="travelBtn">穿越</button>
+                </div>
+                <button class="btn draw" id="drawOneBtn">下一张</button>
+            </div>
+        </div>
+        <div id="confirmDialog" class="dialog-mask" style="display: none;">
+            <div class="dialog-container" onclick="event.stopPropagation()">
+                <div class="dialog-header">确认删除</div>
+                <div class="dialog-body">确定要删除当前卡片吗？</div>
+                <div class="dialog-footer">
+                    <button id="cancelDeleteBtn" class="btn-cancel">取消</button>
+                    <button id="confirmDeleteBtn" class="btn-confirm">确定</button>
+                </div>
+            </div>
+        </div>
+        <div id="spellCheckDialog" class="dialog-mask" style="display: none;">
+            <div class="spell-dialog-container" onclick="event.stopPropagation()">
+                <div class="spell-dialog-header"></div>
+                <div class="spell-dialog-body">
+                    <div class="spell-input-container">
+                        <input id="spellInput" class="spell-input" placeholder="正在检查..." value="">
+                        <div id="spellMessageContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="page2" class="page-container">
+        <div class="page2-bottom-fixed-section">
+            <textarea id="inputContent" class="input-box" placeholder="请输入内容，句号可分隔多条..."></textarea>
+            <div class="top-btn-row">
+                <button id="clearAllBtn" class="btn left-delete">删除</button>
+                <button id="copyAllBtn" class="btn right-copy">复制</button>
+                <button id="saveCardBtn" class="btn save-btn">保存</button>
+            </div>
+            <span id="saveStatus" class="save-status"></span>
+            <div id="versionInfo" class="version-info"></div>
+        </div>
+    </div>
+
+    <div id="page3" class="page-container">
+        <div id="noMarkedMessage" class="no-marked" style="display: none;">暂无标记内容</div>
+        <div id="markedWordsContainer" class="marked-words-container"></div>
+        <div id="page3ActionContainer" class="page3-action-container">
+            <button id="deleteMarkedBtn" class="btn-p3-action delete">删除</button>
+            <button id="travelMarkedBtn" class="btn-p3-action travel">穿越</button>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast" style="display: none;"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const APP_VERSION = 'v1.8'; 
+
+        const wx = {
+            getStorageSync: (key) => { const item = localStorage.getItem(key); return item ? JSON.parse(item) : null; },
+            setStorageSync: (key, data) => { localStorage.setItem(key, JSON.stringify(data)); },
+            removeStorageSync: (key) => { localStorage.removeItem(key); },
+            clearStorageSync: () => { localStorage.clear(); },
+            setClipboardData: async ({ data, success, fail }) => {
+                if (navigator.clipboard) {
+                    try { await navigator.clipboard.writeText(data); if (success) success(); } catch (err) { if (fail) fail(); }
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = data; document.body.appendChild(textArea); textArea.focus(); textArea.select();
+                    try { document.execCommand('copy'); if (fail) fail(); } catch (err) { if (fail) fail(); }
+                    document.body.removeChild(textArea);
+                }
+            },
+            showToast: (options) => {
+                const toastEl = document.getElementById('toast');
+                toastEl.textContent = options.title; toastEl.className = 'toast';
+                if (options.icon === 'success') toastEl.classList.add('success');
+                else if (options.icon === 'error' || options.icon === 'none') toastEl.classList.add('error');
+                else if (options.icon === 'info') toastEl.classList.add('info');
+                toastEl.style.display = 'block';
+                setTimeout(() => { toastEl.style.display = 'none'; }, options.duration || 2000);
+            },
+            showModal: (options) => {
+                const result = confirm(`${options.title}\n${options.content}`);
+                if (options.success) {
+                    options.success({ confirm: result, cancel: !result });
+                }
+            }
+        };
+
+        const pages = {
+            page1: document.getElementById('page1'),
+            page2: document.getElementById('page2'),
+            page3: document.getElementById('page3'),
+        };
+        const navButtons = {
+            btn1: document.getElementById('nav-btn-1'),
+            btn2: document.getElementById('nav-btn-2'),
+            btn3: document.getElementById('nav-btn-3'),
+        };
+        
+        let touchStartX = 0;
+        let currentPageIndex = 1;
+        const swipeThreshold = 50; 
+
+        function handleTouchStart(event) {
+            const targetNode = event.target.nodeName.toUpperCase();
+            if (document.getElementById('confirmDialog').style.display !== 'none' ||
+                document.getElementById('spellCheckDialog').style.display !== 'none' ||
+                ['INPUT', 'TEXTAREA', 'BUTTON'].includes(targetNode) ||
+                event.target.closest('.filter-dot')) { 
+                touchStartX = 0;
+                return;
+            }
+            touchStartX = event.changedTouches[0].screenX;
+        }
+
+        function handleTouchEnd(event) {
+            if (touchStartX === 0) return;
+            const touchEndX = event.changedTouches[0].screenX;
+            const diffX = touchEndX - touchStartX;
+
+            if (diffX < -swipeThreshold && currentPageIndex < 3) { navigateTo(`page${currentPageIndex + 1}`); }
+            else if (diffX > swipeThreshold && currentPageIndex > 1) { navigateTo(`page${currentPageIndex - 1}`); }
+            touchStartX = 0;
+        }
+
+        document.body.addEventListener('touchstart', handleTouchStart, false);
+        document.body.addEventListener('touchend', handleTouchEnd, false);
+
+        function navigateTo(pageId) {
+            Object.values(pages).forEach(p => p.classList.remove('active'));
+            Object.values(navButtons).forEach(b => b.classList.remove('active'));
+            pages[pageId].classList.add('active');
+            navButtons['btn' + pageId.slice(-1)].classList.add('active');
+            currentPageIndex = parseInt(pageId.slice(-1));
+            const handler = app[pageId]; // Use page alias if needed, or direct pageId
+            if (handler && typeof handler.onShow === 'function') {
+                handler.onShow();
+            }
+        }
+        navButtons.btn1.addEventListener('click', () => navigateTo('page1'));
+        navButtons.btn2.addEventListener('click', () => navigateTo('page2'));
+        navButtons.btn3.addEventListener('click', () => navigateTo('page3'));
+
+        const NEWLINE_REPLACEMENT = '##NEWLINE##';
+
+        const app = {
+            // =================================== PAGE 1: 抽卡 ===================================
+            page1: {
+                data: { 
+                    displayContent: '', 
+                    currentIndex: -1, 
+                    isChecking: false, 
+                    cardCount: 0, 
+                    swipeCount: 0, 
+                    todaySwipeCount: 0,
+                    selectedPastdays: new Set([-2]), // -2 for All, -1 for Round Mode, 0 for new, etc.
+                    shuffledCards: [], // For round mode, holds cards not yet shown in current round (array of card objects)
+                    allCardsForRoundMode: [], // The complete set of cards for the current round cycle (array of card objects)
+                    currentRound: 0,    // Current round number for round mode
+                    isRoundMode: false // Flag to indicate if round mode is active
+                },
+                elements: {
+                    todaySwipeCount: document.getElementById('todaySwipeCount'), 
+                    swipeCount: document.getElementById('swipeCount'), 
+                    cardCount: document.getElementById('cardCount'),
+                    lastUpdateTime: document.getElementById('lastUpdateTime'), 
+                    displayContent: document.getElementById('displayContent'), 
+                    confirmDialog: document.getElementById('confirmDialog'),
+                    spellCheckDialog: document.getElementById('spellCheckDialog'), 
+                    spellInput: document.getElementById('spellInput'), 
+                    spellMessageContainer: document.getElementById('spellMessageContainer'),
+                    pastdayFilterSection: document.getElementById('pastdayFilterSection'),
+                    roundProgressDisplay: document.getElementById('roundProgressDisplay')
+                },
+                filterOptions: [-2, -1, 0, 1, 2, 4, 7, 15, 30, 45, 60, 90], 
+
+                onLoad() { 
+                    this.addEventListeners(); 
+                    this.renderFilterDots(); 
+                },
+                onShow() {
+                    // Always update statistics first when page is shown
+                    this.updateStatistics(); 
+                    this.syncTodaySwipeCount(); // Also sync today's swipe count
+
+                    // Handle round mode state when page1 is displayed
+                    if (this.data.isRoundMode) {
+                        this.elements.roundProgressDisplay.style.display = 'block';
+                        // Re-evaluate allCardsForRoundMode to ensure it's fresh
+                        this.data.allCardsForRoundMode = this.getFilteredCards(true); 
+                        const loadedProgress = this.loadRoundProgress();
+
+                        // Only load if total card count matches and shuffled cards are provided
+                        if (loadedProgress && loadedProgress.allCardsCount === this.data.allCardsForRoundMode.length && loadedProgress.shuffledCardWords) {
+                            const allCardsMap = new Map(this.data.allCardsForRoundMode.map(card => [card.word, card]));
+                            this.data.shuffledCards = loadedProgress.shuffledCardWords.map(word => allCardsMap.get(word)).filter(card => card);
+                            this.data.currentRound = loadedProgress.currentRound;
+                        } else {
+                            // If mismatch or no valid saved progress, reset round mode
+                            this.data.shuffledCards = [...this.data.allCardsForRoundMode];
+                            this.shuffleArray(this.data.shuffledCards);
+                            this.data.currentRound = 0;
+                            this.saveRoundProgress(); // Save the newly initialized state
+                        }
+                        this.updateRoundProgressDisplay(); // Update display with loaded/reset progress
+                    } else {
+                        this.elements.roundProgressDisplay.style.display = 'none';
+                    }
+                    // Get random content for the currently active filter mode
+                    this.getRandomContent(false); 
+                },
+                addEventListeners() {
+                    document.getElementById('drawOneBtn').addEventListener('click', () => this.drawOne());
+                    document.getElementById('deleteContentBtn').addEventListener('click', () => this.deleteContent());
+                    document.getElementById('markwordBtn').addEventListener('click', () => this.markword());
+                    document.getElementById('openSpellCheckBtn').addEventListener('click', () => this.openSpellCheck());
+                    document.getElementById('travelBtn').addEventListener('click', () => this.travelToEudic());
+                    document.getElementById('confirmDialog').addEventListener('click', () => this.cancelDelete());
+                    document.getElementById('cancelDeleteBtn').addEventListener('click', () => this.cancelDelete());
+                    document.getElementById('confirmDeleteBtn').addEventListener('click', () => this.confirmDelete());
+                    document.getElementById('spellCheckDialog').addEventListener('click', () => this.closeSpellCheck());
+                    this.elements.spellInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.checkSpelling(); });
+
+                    this.elements.pastdayFilterSection.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('filter-dot')) {
+                            const pastdayValue = parseInt(e.target.dataset.value);
+                            this.toggleFilter(pastdayValue);
+                        }
+                    });
+                },
+                renderFilterDots() {
+                    this.elements.pastdayFilterSection.innerHTML = '';
+                    this.filterOptions.forEach(value => {
+                        const dot = document.createElement('div');
+                        dot.classList.add('filter-dot');
+                        // Ensure 'All' is selected by default if no other filter is active
+                        if (this.data.selectedPastdays.has(value)) {
+                            dot.classList.add('selected');
+                        } else if (this.data.selectedPastdays.size === 0 && value === -2) {
+                             dot.classList.add('selected');
+                             this.data.selectedPastdays.add(-2); // Explicitly add if missing
+                        }
+                        dot.textContent = value === -2 ? 'All' : (value === -1 ? '轮次' : value); // Keep -1 as '轮次'
+                        dot.dataset.value = value;
+                        this.elements.pastdayFilterSection.appendChild(dot);
+                    });
+                },
+                toggleFilter(value) {
+                    const prevIsRoundMode = this.data.isRoundMode;
+
+                    // Clear previous selection visually and in data
+                    this.data.selectedPastdays.clear();
+                    
+                    if (value === -2) { // 'All' filter selected
+                        this.data.selectedPastdays.add(-2);
+                        this.data.isRoundMode = false;
+                        this.elements.roundProgressDisplay.style.display = 'none';
+                        if (prevIsRoundMode) { // If exiting round mode, save current progress
+                            this.saveRoundProgress();
+                        }
+                    } else if (value === -1) { // 'Round Mode' toggled
+                        this.data.isRoundMode = !prevIsRoundMode; // Toggle round mode
+                        if (this.data.isRoundMode) {
+                            this.data.selectedPastdays.add(-1); // Mark -1 as selected
+                            this.elements.roundProgressDisplay.style.display = 'block';
+
+                            this.data.allCardsForRoundMode = this.getFilteredCards(true); // Get all cards as base for round mode
+                            const loadedProgress = this.loadRoundProgress();
+                            
+                            // Check if loaded progress is valid for current set of cards
+                            if (loadedProgress && loadedProgress.allCardsCount === this.data.allCardsForRoundMode.length && loadedProgress.shuffledCardWords) {
+                                // Reconstruct shuffledCards based on saved word texts
+                                const allCardsMap = new Map(this.data.allCardsForRoundMode.map(card => [card.word, card]));
+                                this.data.shuffledCards = loadedProgress.shuffledCardWords.map(word => allCardsMap.get(word)).filter(card => card);
+                                this.data.currentRound = loadedProgress.currentRound;
+                                // If loaded shuffledCards are empty but total cards exist, start a new round
+                                if (this.data.shuffledCards.length === 0 && this.data.allCardsForRoundMode.length > 0) {
+                                    this.data.currentRound++;
+                                    this.data.shuffledCards = [...this.data.allCardsForRoundMode];
+                                    this.shuffleArray(this.data.shuffledCards);
+                                }
+                            } else {
+                                // Initialize new round if no saved progress or card count changed or data malformed
+                                this.data.shuffledCards = [...this.data.allCardsForRoundMode];
+                                this.shuffleArray(this.data.shuffledCards);
+                                this.data.currentRound = 0;
+                            }
+                            this.saveRoundProgress(); // Save the initial/restored state
+                        } else {
+                            // Exiting round mode
+                            this.data.selectedPastdays.add(-2); // Fallback to 'All'
+                            this.elements.roundProgressDisplay.style.display = 'none';
+                            this.saveRoundProgress(); // Ensure progress is saved before exiting round mode
+                        }
+                    } else { // Specific pastday filter selected
+                        this.data.selectedPastdays.add(value); // Select the clicked value
+                        this.data.isRoundMode = false;
+                        this.elements.roundProgressDisplay.style.display = 'none';
+                        if (prevIsRoundMode) { // If exiting round mode, save current progress
+                            this.saveRoundProgress();
+                        }
+                        // If nothing is selected after toggle, default to All
+                        if (this.data.selectedPastdays.size === 0) {
+                            this.data.selectedPastdays.add(-2);
+                        }
+                    }
+                    
+                    this.renderFilterDots(); // Re-render dots to reflect active selection
+                    this.getRandomContent(false); // Get content based on new filter mode
+                    this.updateRoundProgressDisplay(); // Update display
+                },
+
+                syncTodaySwipeCount() {
+                    const swipeData = wx.getStorageSync('todaySwipeData') || {}; const today = new Date().toLocaleDateString();
+                    if (swipeData.date === today) { this.data.todaySwipeCount = swipeData.count; } else { this.data.todaySwipeCount = 0; }
+                    this.elements.todaySwipeCount.textContent = this.data.todaySwipeCount;
+                },
+                updateStatistics() {
+                    const cards = wx.getStorageSync('myCards') || []; 
+                    this.data.cardCount = cards.length;
+                    this.elements.cardCount.textContent = `${cards.length} 条`; 
+                    this.elements.lastUpdateTime.textContent = new Date().toLocaleString('zh-CN', { hour12: false });
+                },
+                
+                handleDailyPastdayUpdate() {
+                    const today = new Date().toLocaleDateString('en-CA'); 
+                    const lastUpdateDate = wx.getStorageSync('lastPastdayUpdateDate');
+
+                    if (lastUpdateDate !== today) { 
+                        let cards = wx.getStorageSync('myCards') || [];
+                        let updated = false;
+
+                        cards = cards.map(card => {
+                            // pastday: 0 means new, others increment
+                            if (card.pastday !== 0) { 
+                                card.pastday += 1;
+                                updated = true;
+                            }
+                            return card;
+                        });
+                        if (updated) {
+                            wx.setStorageSync('myCards', cards);
+                            wx.setStorageSync('lastPastdayUpdateDate', today);
+                        }
+                        // Reset round progress on new day to ensure pastday changes are reflected
+                        // This ensures that round mode will start fresh or load based on the new card set
+                        this.data.isRoundMode = false; // Exit round mode on new day
+                        this.data.shuffledCards = [];
+                        this.data.allCardsForRoundMode = [];
+                        this.data.currentRound = 0;
+                        this.elements.roundProgressDisplay.style.display = 'none';
+                        wx.removeStorageSync('roundModeProgress'); // Clear saved progress as it's now outdated
+                    }
+                },
+
+                shuffleArray(array) {
+                    for (let i = array.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [array[i], array[j]] = [array[j], array[i]];
+                    }
+                },
+
+                // Gets cards based on selected filters. includeAll forces getting all cards regardless of filter.
+                getFilteredCards(includeAll = false) {
+                    const allCards = wx.getStorageSync('myCards') || [];
+                    if (allCards.length === 0) return [];
+
+                    if (includeAll || this.data.selectedPastdays.has(-2)) { // -2 is 'All' filter
+                        return [...allCards]; 
+                    } else {
+                        // If not 'All' and not 'Round Mode' (which uses includeAll=true from its logic), filter by selected pastdays
+                        return allCards.filter(card => this.data.selectedPastdays.has(card.pastday));
+                    }
+                },
+
+                updateRoundProgressDisplay() {
+                    if (this.data.isRoundMode) {
+                        const totalCards = this.data.allCardsForRoundMode.length; // Use the base for the round
+                        const cardsSeenInRound = totalCards - this.data.shuffledCards.length;
+                        this.elements.roundProgressDisplay.textContent = `${cardsSeenInRound}/${totalCards}-${this.data.currentRound}`;
+                        this.elements.roundProgressDisplay.style.display = 'block';
+                    } else {
+                        this.elements.roundProgressDisplay.style.display = 'none';
+                    }
+                },
+
+                saveRoundProgress() {
+                    // Only save if round mode is active and there are cards to track
+                    if (this.data.isRoundMode && this.data.allCardsForRoundMode.length > 0) {
+                        const progress = {
+                            currentRound: this.data.currentRound,
+                            shuffledCardWords: this.data.shuffledCards.map(card => card.word), // Save words, not full objects
+                            allCardsCount: this.data.allCardsForRoundMode.length // Save count for validation
+                        };
+                        wx.setStorageSync('roundModeProgress', progress);
+                    } else {
+                        // If not in round mode or no cards, remove any old saved progress
+                        wx.removeStorageSync('roundModeProgress'); 
+                    }
+                },
+
+                loadRoundProgress() {
+                    return wx.getStorageSync('roundModeProgress');
+                },
+
+                getRandomContent(isUserAction = false) {    
+                    if (isUserAction) { 
+                        let totalCount = (wx.getStorageSync('swipeCount') || 0) + 1;
+                        wx.setStorageSync('swipeCount', totalCount);
+                        this.data.swipeCount = totalCount;
+                        this.elements.swipeCount.textContent = totalCount;
+
+                        const today = new Date().toLocaleDateString();
+                        let todayData = wx.getStorageSync('todaySwipeData') || {};
+                        if (todayData.date === today) {
+                            todayData.count += 1;
+                        } else {
+                            todayData = { date: today, count: 1 };
+                        }
+                        wx.setStorageSync('todaySwipeData', todayData);
+                        this.data.todaySwipeCount = todayData.count;
+                        this.elements.todaySwipeCount.textContent = todayData.count;
+                    }
+                    
+                    let currentCard = null;
+                    let allCards = wx.getStorageSync('myCards') || [];
+
+                    // Handle empty card list first
+                    if (allCards.length === 0) {
+                        this.elements.displayContent.textContent = '暂无内容，请添加';
+                        this.data.currentIndex = -1;
+                        this.updateStatistics(); 
+                        this.updateRoundProgressDisplay(); 
+                        this.saveRoundProgress(); // Ensure no invalid progress is saved
+                        if (isUserAction) {
+                            wx.showToast({ title: '没有卡片内容，请添加！', icon: 'info', duration: 1500 });
+                        }
+                        return;
+                    }
+
+                    if (this.data.isRoundMode) {
+                        // Ensure allCardsForRoundMode is up-to-date
+                        const currentAllCardsForRoundMode = this.getFilteredCards(true);
+                        if (this.data.allCardsForRoundMode.length !== currentAllCardsForRoundMode.length) {
+                               // If card count changed (e.g., deleted), reset round mode
+                            this.data.allCardsForRoundMode = [...currentAllCardsForRoundMode];
+                            this.data.shuffledCards = [...this.data.allCardsForRoundMode];
+                            this.shuffleArray(this.data.shuffledCards);
+                            this.data.currentRound = 0;
+                            this.saveRoundProgress(); // Save this reset state
+                        }
+
+                        if (this.data.shuffledCards.length === 0) {
+                            // If current round is exhausted, start a new one
+                            this.data.currentRound++;
+                            this.data.shuffledCards = [...this.data.allCardsForRoundMode]; // Reshuffle all cards from base
+                            if (this.data.shuffledCards.length === 0) { // Double check if cards still exist
+                                this.elements.displayContent.textContent = '暂无内容，请添加';
+                                this.data.currentIndex = -1;
+                                this.updateRoundProgressDisplay();
+                                this.saveRoundProgress(); // Save empty state if no cards at all
+                                if (isUserAction) {
+                                    wx.showToast({ title: '已完成所有轮次，请添加新卡片或重置', icon: 'info', duration: 2500 });
+                                }
+                                return;
+                            }
+                            this.shuffleArray(this.data.shuffledCards);
+                        }
+                        currentCard = this.data.shuffledCards.pop(); // Get and remove the last card
+                        // Find the index of the currentCard within the *original* allCards array
+                        // This is important because deleted items or order in shuffledCards won't match original indices
+                        this.data.currentIndex = allCards.findIndex(card => card.word === currentCard.word && card.pastday === currentCard.pastday);
+                        if (this.data.currentIndex === -1) {
+                            // Fallback if somehow not found (shouldn't happen with correct logic)
+                            // This might indicate a data inconsistency, re-fetching might be safer
+                            this.data.currentIndex = Math.floor(Math.random() * allCards.length);
+                            currentCard = allCards[this.data.currentIndex];
+                        }
+
+                    } else { // Not in round mode (random selection based on filter)
+                        let filteredCards = this.getFilteredCards();
+
+                        if (filteredCards.length === 0) {   
+                            this.elements.displayContent.textContent = '暂无内容，请添加';   
+                            this.data.currentIndex = -1;   
+                            if (isUserAction) { 
+                                wx.showToast({ title: '当前筛选无卡片', icon: 'info', duration: 1500 });
+                            }
+                            this.updateStatistics();   
+                            this.updateRoundProgressDisplay(); // Hide progress display
+                            return;   
+                        }
+                        const idx = Math.floor(Math.random() * filteredCards.length);   
+                        currentCard = filteredCards[idx];
+                        this.data.currentIndex = allCards.findIndex(card => card.word === currentCard.word && card.pastday === currentCard.pastday);
+                    }
+                    
+                    let displayWord = currentCard.word.replace(new RegExp(NEWLINE_REPLACEMENT, 'g'), '\n');
+                    this.data.displayContent = displayWord;   
+                    
+                    const wordCounts = wx.getStorageSync('wordCounts') || {};
+                    const currentWordText = currentCard.word; 
+                    
+                    let count = wordCounts[currentWordText] || 0; 
+                    if (isUserAction) {
+                        count = (wordCounts[currentWordText] || 0) + 1;
+                        wordCounts[currentWordText] = count;
+                        wx.setStorageSync('wordCounts', wordCounts);
+                    }
+                    
+                    let displayHtml = `<div class="card-content-container">`;
+                    displayHtml += `<span class="card-text">${displayWord.replace(/\n/g, '<br>')}</span>`;   
+                    
+                    if (count > 0) { 
+                        displayHtml += `<div class="word-count">${count}</div>`; 
+                    }
+                    displayHtml += `</div>`;
+                    this.elements.displayContent.innerHTML = displayHtml;
+
+                    this.updateStatistics();
+                    this.updateRoundProgressDisplay(); // Update after drawing a card
+                    this.saveRoundProgress(); // Save progress after each draw
+                },
+                drawOne() { this.getRandomContent(true); },
+                deleteContent() {
+                    if (!this.data.displayContent || this.data.displayContent === '暂无内容，请添加') { wx.showToast({ title: '没有内容可删除', icon: 'error' }); return; }
+                    this.elements.confirmDialog.style.display = 'flex';
+                },
+                confirmDelete() {
+                    let allCards = wx.getStorageSync('myCards') || []; 
+                    const idx = this.data.currentIndex; 
+                    if (idx >= 0 && idx < allCards.length) { 
+                        const deletedWord = allCards[idx].word; 
+                        let wordCounts = wx.getStorageSync('wordCounts') || {};
+                        if (wordCounts[deletedWord]) {
+                            delete wordCounts[deletedWord];
+                            wx.setStorageSync('wordCounts', wordCounts);
+                        }
+                        
+                        allCards.splice(idx, 1); 
+                        wx.setStorageSync('myCards', allCards); 
+                        wx.showToast({ title: '删除成功', icon: 'success' }); 
+                        
+                        // If in round mode, reset shuffled cards and current round to re-evaluate total
+                        if (this.data.isRoundMode) {
+                            this.data.allCardsForRoundMode = this.getFilteredCards(true); // Re-evaluate total cards
+                            this.data.shuffledCards = [...this.data.allCardsForRoundMode];
+                            this.shuffleArray(this.data.shuffledCards);
+                            this.data.currentRound = 0; // Reset round
+                            this.saveRoundProgress(); // Save the reset state
+                        }
+                        this.getRandomContent(false); // Get new content after deletion
+                    }
+                    this.cancelDelete();
+                },
+                cancelDelete() { this.elements.confirmDialog.style.display = 'none'; },
+                markword() {
+                    const word = this.data.displayContent; 
+                    if (!word || word === '暂无内容，请添加') { wx.showToast({ title: '没有内容可标记', icon: 'error' }); return; }
+                    let markedWords = wx.getStorageSync('markedWords') || [];
+                    const wordToMark = word.replace(/\n/g, NEWLINE_REPLACEMENT);
+                    if (markedWords.includes(wordToMark)) { wx.showToast({ title: '内容已标记', icon: 'info' }); return; }
+                    markedWords.push(wordToMark); wx.setStorageSync('markedWords', markedWords); wx.showToast({ title: '✓ 已标记', icon: 'success' });
+                },
+                travelToEudic() {
+                    const word = this.data.displayContent;
+                    if (!word || word === '暂无内容，请添加') { wx.showToast({ title: '没有内容可穿越', icon: 'error' }); return; }
+                    wx.setClipboardData({ data: word }); const encodedWord = encodeURIComponent(word.trim()); const url = `eudic://dict/${encodedWord}`; window.location.href = url;
+                },
+                openSpellCheck() {
+                    if (!this.data.displayContent || this.data.displayContent === '暂无内容，请添加') {
+                        wx.showToast({ title: '没有内容可拼写', icon: 'error' });
+                        return;
+                    }
+                    this.elements.spellInput.value = '';
+                    this.elements.spellMessageContainer.innerHTML = '';
+                    this.elements.spellInput.classList.remove('error');
+                    this.elements.spellCheckDialog.style.display = 'flex';
+                    this.elements.spellInput.focus();
+                    setTimeout(() => { this.elements.spellInput.focus(); }, 150);
+                },
+                closeSpellCheck() { this.elements.spellCheckDialog.style.display = 'none'; this.data.isChecking = false; },
+                checkSpelling() {
+                    if (this.data.isChecking) return; this.data.isChecking = true; const input = this.elements.spellInput.value.trim().toLowerCase(); 
+                    const correct = (this.data.displayContent || '').trim().toLowerCase(); 
+
+                    const msgContainer = this.elements.spellMessageContainer;
+                    if (!input) { msgContainer.innerHTML = `<div class="spell-error-msg">请输入单词</div>`; this.elements.spellInput.classList.add('error'); this.data.isChecking = false; return; }
+                    if (input === correct) {
+                        msgContainer.innerHTML = `<div class="spell-correct-msg">✓ 拼写正确！</div>`; this.elements.spellInput.classList.remove('error');
+                        setTimeout(() => { this.closeSpellCheck(); }, 1000);
+                    } else {
+                        msgContainer.innerHTML = `<div class="spell-error-msg">拼写错误，请重试</div>`;
+                        this.elements.spellInput.classList.add('error');
+                        this.elements.spellInput.value = '';
+                        this.elements.spellInput.focus();
+                        this.data.isChecking = false;
+                    }
+                }
+            },
+            // =================================== PAGE 2: 管理 ===================================
+            page2: {
+                elements: { 
+                    inputContent: document.getElementById('inputContent'), 
+                    saveStatus: document.getElementById('saveStatus'),
+                    versionInfo: document.getElementById('versionInfo') 
+                },
+                onLoad() { 
+                    this.addEventListeners(); 
+                    this.elements.versionInfo.textContent = 'Version ' + APP_VERSION;
+                },
+                onShow() { 
+                    this.elements.inputContent.value = ''; 
+                    this.elements.saveStatus.textContent = ''; 
+                },
+                addEventListeners() {
+                    document.getElementById('saveCardBtn').addEventListener('click', () => this.saveCard());
+                    document.getElementById('copyAllBtn').addEventListener('click', () => this.copyAllContents());
+                    document.getElementById('clearAllBtn').addEventListener('click', () => this.onClearAll());
+                },
+                saveCard() {
+                    let content = this.elements.inputContent.value;
+                    // Split by newlines, trim each line, filter out empty lines, then join with NEWLINE_REPLACEMENT
+                    content = content.split('\n')
+                                            .map(line => line.trim())
+                                            .filter(line => line !== '')
+                                            .join(NEWLINE_REPLACEMENT);
+
+                    const rawNewCards = content.split('。')
+                        .map(s => s.trim())
+                        .filter(s => s !== '');
+
+                    if (rawNewCards.length === 0) {
+                        wx.showToast({ title: '内容不能为空', icon: 'none' });
+                        this.elements.inputContent.value = ''; 
+                        return;
+                    }
+
+                    let existingCards = wx.getStorageSync('myCards') || [];
+                    
+                    const existingWordSet = new Set(existingCards.map(card => card.word));
+                    const addedWords = new Set(); 
+                    let uniqueNewCards = [];
+                    let duplicateCount = 0;
+                    
+                    rawNewCards.forEach(newWordText => {
+                        if (existingWordSet.has(newWordText) || addedWords.has(newWordText)) {
+                            duplicateCount++;
+                        } else {
+                            uniqueNewCards.push({ word: newWordText, pastday: 0 }); 
+                            addedWords.add(newWordText); 
+                        }
+                    });
+
+                    if (uniqueNewCards.length > 0) {
+                        const updatedCards = existingCards.concat(uniqueNewCards);
+                        wx.setStorageSync('myCards', updatedCards);
+                        this.elements.saveStatus.textContent = `成功保存 ${uniqueNewCards.length} 条!`;
+                        if (duplicateCount > 0) {
+                            wx.showToast({
+                                title: `部分内容重复，跳过 ${duplicateCount} 条`,
+                                icon: 'info',
+                                duration: 3000
+                            });
+                        } else {
+                            wx.showToast({ title: '保存成功', icon: 'success' });
+                        }
+                        // After saving, reset page1's round mode state completely 
+                        // as card count has changed and previous progress is invalid
+                        app.page1.data.isRoundMode = false;
+                        app.page1.data.shuffledCards = [];
+                        app.page1.data.allCardsForRoundMode = [];
+                        app.page1.data.currentRound = 0;
+                        app.page1.elements.roundProgressDisplay.style.display = 'none';
+                        app.page1.data.selectedPastdays.clear();
+                        app.page1.data.selectedPastdays.add(-2); // Default to 'All'
+                        app.page1.renderFilterDots(); // Re-render filter dots
+                        app.page1.saveRoundProgress(); // Clear saved round progress as card count changed
+                    } else if (duplicateCount > 0) {
+                        wx.showToast({
+                            title: `全部内容重复，未保存`,
+                            icon: 'error',
+                            duration: 2500
+                        });
+                    } else {
+                        wx.showToast({ title: '没有内容可保存', icon: 'none' });
+                    }
+                    
+                    this.elements.inputContent.value = ''; 
+                    setTimeout(() => { this.elements.saveStatus.textContent = ''; }, 2000);
+                },
+                copyAllContents() {
+                    const cards = wx.getStorageSync('myCards') || [];
+                    const cardWords = cards.map(card => {
+                        const wordText = card.word;
+                        return wordText.replace(new RegExp(NEWLINE_REPLACEMENT, 'g'), '\n');
+                    });
+                    if (cardWords.length === 0) { wx.showToast({ title: '没有内容可复制', icon: 'none' }); return; }
+                    const contents = cardWords.join('。\n'); 
+                    wx.setClipboardData({ data: contents, success: () => wx.showToast({ title: '复制成功', icon: 'success', duration: 1000 }) });
+                },
+                onClearAll() {
+                    wx.showModal({
+                        title: '警告', content: '确定要清空所有内容吗？此操作不可恢复！',
+                        success: (res) => { 
+                            console.log('Modal result:', res); // 添加调试信息
+                            if (res.confirm) { 
+                                console.log('User confirmed clear all.'); // 添加调试信息
+                                wx.removeStorageSync('myCards'); 
+                                wx.removeStorageSync('lastPastdayUpdateDate'); 
+                                wx.removeStorageSync('wordCounts'); 
+                                wx.removeStorageSync('markedWords'); 
+                                wx.removeStorageSync('swipeCount'); 
+                                wx.removeStorageSync('todaySwipeData'); 
+                                wx.removeStorageSync('roundModeProgress'); // Clear round mode progress
+                                this.elements.saveStatus.textContent = ''; 
+                                wx.showToast({ title: '已清空', icon: 'success', duration: 1000 }); 
+                                // Clear all relevant page1 states after clearing all data
+                                app.page1.getRandomContent(false); // Update display to "暂无内容"
+                                app.page1.data.isRoundMode = false; 
+                                app.page1.data.shuffledCards = [];
+                                app.page1.data.allCardsForRoundMode = [];
+                                app.page1.data.currentRound = 0;
+                                app.page1.elements.roundProgressDisplay.style.display = 'none';
+                                app.page1.data.selectedPastdays.clear();
+                                app.page1.data.selectedPastdays.add(-2); // Default to 'All'
+                                app.page1.renderFilterDots(); // Re-render filter dots to reflect default 'All' state
+                                console.log('All data cleared from localStorage.'); // 添加调试信息
+                                console.log('myCards after clear:', wx.getStorageSync('myCards')); // 再次检查 localStorage 是否为空
+                            } else {
+                                console.log('User cancelled clear all.'); // 添加调试信息
+                            }
+                        }
+                    });
+                }
+            },
+            // =================================== PAGE 3: 已标记 ===================================
+            page3: {
+                data: { selectedWord: null, },
+                elements: {
+                    container: document.getElementById('markedWordsContainer'), noMarkedMsg: document.getElementById('noMarkedMessage'),
+                    actionContainer: document.getElementById('page3ActionContainer'), deleteBtn: document.getElementById('deleteMarkedBtn'), travelBtn: document.getElementById('travelMarkedBtn'),
+                },
+                onLoad() { this.addEventListeners(); },
+                onShow() { this.loadMarkedWords(); },
+                addEventListeners() {
+                    this.elements.deleteBtn.addEventListener('click', () => this.deleteSelectedWord());
+                    this.elements.travelBtn.addEventListener('click', () => this.travelSelectedWord());
+                },
+                loadMarkedWords() {
+                    let words = wx.getStorageSync('markedWords') || [];
+                    words = words.map(word => word.replace(new RegExp(NEWLINE_REPLACEMENT, 'g'), '\n'));
+
+                    this.elements.container.innerHTML = ''; this.data.selectedWord = null; this.elements.actionContainer.style.display = 'none';
+                    if (words.length === 0) { this.elements.noMarkedMsg.style.display = 'block'; }
+                    else {
+                        this.elements.noMarkedMsg.style.display = 'none';
+                        words.forEach(word => {
+                            const wordEl = document.createElement('div'); 
+                            wordEl.className = 'marked-word'; 
+                            wordEl.innerHTML = word.replace(/\n/g, '<br>'); 
+                            wordEl.dataset.word = word.replace(/\n/g, NEWLINE_REPLACEMENT); 
+                            wordEl.addEventListener('click', (e) => this.selectWord(e)); 
+                            this.elements.container.appendChild(wordEl);
+                        });
+                    }
+                },
+                selectWord(e) {
+                    const word = e.currentTarget.dataset.word; 
+                    if (this.data.selectedWord === word) {
+                        this.data.selectedWord = null; e.currentTarget.classList.remove('selected'); this.elements.actionContainer.style.display = 'none';
+                    } else {
+                        if (this.data.selectedWord) { const prevSelected = this.elements.container.querySelector('.selected'); if (prevSelected) prevSelected.classList.remove('selected'); }
+                        this.data.selectedWord = word; e.currentTarget.classList.add('selected'); this.elements.actionContainer.style.display = 'flex';
+                    }
+                },
+                deleteSelectedWord() {
+                    if (!this.data.selectedWord) return;
+                    let markedWords = wx.getStorageSync('markedWords') || []; 
+                    markedWords = markedWords.filter(w => w !== this.data.selectedWord); 
+                    wx.setStorageSync('markedWords', markedWords); wx.showToast({ title: '删除成功', icon: 'success', duration: 400 }); this.loadMarkedWords();
+                },
+                travelSelectedWord() {
+                    const word = this.data.selectedWord; 
+                    if (!word) { wx.showToast({ title: '没有选中内容', icon: 'error' }); return; }
+                    const actualWord = word.replace(new RegExp(NEWLINE_REPLACEMENT, 'g'), '\n');
+                    wx.setClipboardData({ data: actualWord }); 
+                    const encodedWord = encodeURIComponent(actualWord.trim()); 
+                    const url = `eudic://dict/${encodedWord}`; 
+                    window.location.href = url;
+                }
+            },
+        };
+
+        // --- Initialize App ---
+        Object.values(app).forEach(pageModule => { if(typeof pageModule.onLoad === 'function') pageModule.onLoad(); });
+        navigateTo('page1');
+        
+        // 如果 localStorage 中没有 myCards，则添加一些 demo 数据
+        if (!localStorage.getItem('myCards')) {
+            const demoWords = [
+                { word: 'Welcome to MyCards', pastday: 0 }, 
+                { word: '这是一个例子。这是一个多行\n内容的例子。', pastday: 0 }, 
+                { word: '过去一天单词', pastday: 1 },
+                { word: '过去两天单词', pastday: 2 },
+                { word: '过去四天单词', pastday: 4 },
+                { word: '过去七天单词', pastday: 7 },
+                { word: '过去十五天单词', pastday: 15 },
+                { word: '过去三十天单词', pastday: 30 },
+                { word: '过去四十五天单词', pastday: 45 },
+                { word: '过去六十天单词', pastday: 60 },
+                { word: '过去九十天单词', pastday: 90 },
+                { word: 'Hello\nWorld', pastday: 0 },
+                { word: 'Another\nLine\nExample', pastday: 15 },
+            ];
+            const processedDemoWords = demoWords.map(card => {
+                return { 
+                    word: card.word.includes('\n') ? card.word.replace(/\n/g, NEWLINE_REPLACEMENT) : card.word, 
+                    pastday: card.pastday !== undefined ? card.pastday : 0 
+                };
+            });
+            localStorage.setItem('myCards', JSON.stringify(processedDemoWords));
+        }
+    });
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registered: ', registration);
+                })
+                .catch(error => {
+                    console.error('Service Worker registration failed: ', error);
+                });
+        });
+    }
+    </script>
+</body>
+</html>
