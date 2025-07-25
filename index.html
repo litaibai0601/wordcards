@@ -174,7 +174,7 @@
         .card-display {
             width: 100%;
             min-height: 32vw;
-            max-height: 42.67vw;
+            max-height: 72.67vw;
             padding: 1.07vw 0;
             box-sizing: border-box;
             display: flex;
@@ -450,7 +450,7 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const APP_VERSION = 'v2.3'; 
+        const APP_VERSION = 'v2.4'; 
 
         const wx = {
             getStorageSync: (key) => { const item = localStorage.getItem(key); return item ? JSON.parse(item) : null; },
@@ -861,11 +861,17 @@
                             this.data.k++; // 轮次加1
                         }
                         currentCardsPool = this.data.allword1;
-                        selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
-                        selectedCard = currentCardsPool[selectedCardIndexInPool];
-                        if (isUserAction && selectedCard) { // 只有用户点击时才删除并更新计数
+                        // 在抽卡前判断是否是用户行为，如果是，则先删除再抽
+                        if (isUserAction && currentCardsPool.length > 0) { // 只有用户点击时才删除并更新计数
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
                             this.data.allword1.splice(selectedCardIndexInPool, 1);
                             this.data.i = this.data.j - this.data.allword1.length; // 修正i的计算
+                        } else if (!isUserAction && currentCardsPool.length > 0) { // 如果不是用户行为（例如页面加载），只显示不删除
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
+                        } else { // 如果卡片池为空
+                            selectedCard = null;
                         }
 
                     } else if (this.data.currentMode === '1') {
@@ -887,11 +893,17 @@
                             this.data.m++; // 轮次加1
                         }
                         currentCardsPool = this.data.todayword1;
-                        selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
-                        selectedCard = currentCardsPool[selectedCardIndexInPool];
-                        if (isUserAction && selectedCard) { // 只有用户点击时才删除并更新计数
+                        // 在抽卡前判断是否是用户行为，如果是，则先删除再抽
+                        if (isUserAction && currentCardsPool.length > 0) { // 只有用户点击时才删除并更新计数
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
                             this.data.todayword1.splice(selectedCardIndexInPool, 1);
                             this.data.x = this.data.n - this.data.todayword1.length; // 修正x的计算
+                        } else if (!isUserAction && currentCardsPool.length > 0) { // 如果不是用户行为（例如页面加载），只显示不删除
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
+                        } else { // 如果卡片池为空
+                            selectedCard = null;
                         }
                     } else if (this.data.currentMode === '-1') { // 新增 -1 模式逻辑
                         if (this.data.todayNewWord1.length === 0) {
@@ -910,11 +922,17 @@
                             this.data.p++;
                         }
                         currentCardsPool = this.data.todayNewWord1;
-                        selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
-                        selectedCard = currentCardsPool[selectedCardIndexInPool];
-                        if (isUserAction && selectedCard) {
+                        // 在抽卡前判断是否是用户行为，如果是，则先删除再抽
+                        if (isUserAction && currentCardsPool.length > 0) {
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
                             this.data.todayNewWord1.splice(selectedCardIndexInPool, 1);
                             this.data.y = this.data.z - this.data.todayNewWord1.length; // 修正y的计算
+                        } else if (!isUserAction && currentCardsPool.length > 0) {
+                            selectedCardIndexInPool = Math.floor(Math.random() * currentCardsPool.length);
+                            selectedCard = currentCardsPool[selectedCardIndexInPool];
+                        } else {
+                            selectedCard = null;
                         }
                     }
 
@@ -961,6 +979,10 @@
                     this.updateProgressDisplay();
                     this.saveProgress(); // 保存新的进度
                 },
+				
+                  
+				
+				
                 drawOne() { this.getRandomContent(true); },
                 deleteContent() {
                     if (!this.data.displayContent || this.data.displayContent === '暂无内容，请添加') { wx.showToast({ title: '没有内容可删除', icon: 'error' }); return; }
